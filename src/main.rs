@@ -26,6 +26,7 @@ pub type WebSocketSession = Arc<Mutex<actix_ws::Session>>;
 
 pub type WebSocketSessions = Arc<Mutex<HashMap<Uuid, WebSocketSession>>>;
 
+// Shared application state
 #[derive(Clone)]
 struct AppState {
     db_conn: DatabaseConnection,
@@ -33,6 +34,7 @@ struct AppState {
     ws_clients: WebSocketSessions,
 }
 
+// Events with data to send through all websocket sessions
 #[derive(Serialize, Deserialize, Debug)]
 pub enum DbAction {
     Created(Model),
@@ -87,10 +89,12 @@ async fn main() -> std::io::Result<()> {
     tokio::spawn(async move {
         while let Some(message) = rx.recv().await {
             let json = serde_json::to_string(&message).unwrap();
+
             debug!("Sending {} action update to WebSocket clients", message);
-            for (_, ws_session) in ws_clients.lock().await.iter() {
-                let mut ws_session = ws_session.lock().await;
-                let _ = ws_session.text(&json).await;
+
+            let sessions_lock = ws_clients.lock().await;
+            for (_, ws_session) in sessions_lock.iter() {
+                let _ = ws_session.lock().await.text(&json).await;
             }
         }
     });
