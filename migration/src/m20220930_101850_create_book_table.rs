@@ -21,9 +21,9 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(Book::Title).string().not_null())
                     .col(ColumnDef::new(Book::Author).string().not_null())
                     .col(ColumnDef::new(Book::Price).string())
-                    .col(ColumnDef::new(Book::PublishDate).date_time())
-                    .col(ColumnDef::new(Book::CreatedAt).date_time().not_null())
-                    .col(ColumnDef::new(Book::UpdatedAt).date_time().not_null())
+                    .col(ColumnDef::new(Book::PublishDate).timestamp())
+                    .col(ColumnDef::new(Book::CreatedAt).timestamp_with_time_zone().not_null())
+                    .col(ColumnDef::new(Book::UpdatedAt).timestamp_with_time_zone().not_null())
                     .to_owned(),
             )
             .await

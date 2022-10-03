@@ -1,3 +1,4 @@
+use chrono::Utc;
 use entity::book::ActiveModel;
 use sea_orm::{prelude::DateTimeUtc, ActiveValue, IntoActiveValue};
 use serde::{Serialize, Deserialize};
@@ -30,7 +31,7 @@ pub struct CreateBook {
 
 impl ToActiveModel<ActiveModel> for CreateBook {
     fn to_active_model(self) -> ActiveModel {
-      let timestamp = DateTimeUtc::default();
+      let timestamp = Utc::now();
       ActiveModel {
         id: ActiveValue::NotSet,
         title: ActiveValue::Set(self.title),
@@ -54,7 +55,7 @@ pub struct UpdateBook {
 
 impl ToActiveModel<ActiveModel> for UpdateBook {
     fn to_active_model(self) -> ActiveModel {
-      let timestamp = DateTimeUtc::default();
+      let timestamp = Utc::now();
       ActiveModel {
         id: ActiveValue::NotSet,
         title: to_active_value(self.title),
