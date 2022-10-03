@@ -42,10 +42,10 @@ async fn get_book(
 #[post("/book")]
 async fn create_book(
     data: web::Data<AppState>,
-    info: web::Json<CreateBook>,
+    payload: web::Json<CreateBook>,
 ) -> Result<impl Responder, ApiError> {
     let db = &data.db_conn;
-    let active_model = info.into_inner().to_active_model();
+    let active_model = payload.into_inner().to_active_model();
     let inserted_model = active_model.insert(db).await?;
     Ok(HttpResponse::Created()
         .content_type("application/json")
@@ -56,13 +56,13 @@ async fn create_book(
 async fn patch_book(
     data: web::Data<AppState>,
     id: web::Path<i32>,
-    info: web::Json<UpdateBook>,
+    payload: web::Json<UpdateBook>,
 ) -> Result<impl Responder, ApiError> {
     let db = &data.db_conn;
     let book_id = id.into_inner();
     let opt_book = Book::find_by_id(book_id).one(db).await?;
     let book = opt_book.ok_or(ApiError::NotFound("No such book with given id"))?;
-    let update_book = info.into_inner();
+    let update_book = payload.into_inner();
     if update_book.updated_at != book.updated_at {
         return Err(ApiError::OutdatedData);
     }

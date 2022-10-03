@@ -1,5 +1,8 @@
 use actix_web::{body::BoxBody, http::StatusCode, HttpResponse, ResponseError};
-use std::{fmt, io};
+use std::{
+    fmt::{self, Debug},
+    io,
+};
 
 #[derive(Debug)]
 pub enum ApiError {
@@ -44,6 +47,6 @@ impl ResponseError for ApiError {
     }
 
     fn error_response(&self) -> HttpResponse<BoxBody> {
-        HttpResponse::Ok().body("Internal server error!")
+        HttpResponse::Ok().body(format!("{}", self))
     }
 }
