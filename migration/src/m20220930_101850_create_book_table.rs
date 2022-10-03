@@ -22,8 +22,16 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(Book::Author).string().not_null())
                     .col(ColumnDef::new(Book::Price).string())
                     .col(ColumnDef::new(Book::PublishDate).timestamp())
-                    .col(ColumnDef::new(Book::CreatedAt).timestamp_with_time_zone().not_null())
-                    .col(ColumnDef::new(Book::UpdatedAt).timestamp_with_time_zone().not_null())
+                    .col(
+                        ColumnDef::new(Book::CreatedAt)
+                            .timestamp_with_time_zone()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(Book::UpdatedAt)
+                            .timestamp_with_time_zone()
+                            .not_null(),
+                    )
                     .to_owned(),
             )
             .await
@@ -46,5 +54,5 @@ enum Book {
     PublishDate,
     Price,
     CreatedAt,
-    UpdatedAt
+    UpdatedAt,
 }
