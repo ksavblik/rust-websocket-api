@@ -59,8 +59,15 @@ async fn patch_book(
     info: web::Json<UpdateBook>,
 ) -> Result<impl Responder, ApiError> {
     let db = &data.db_conn;
-    let mut active_model: ActiveModel = info.into_inner().to_active_model();
-    active_model.id = ActiveValue::Set(id.into_inner());
+    let book_id = id.into_inner();
+    let opt_book = Book::find_by_id(book_id).one(db).await?;
+    let book = opt_book.ok_or(ApiError::NotFound("No such book with given id"))?;
+    let update_book = info.into_inner();
+    if update_book.updated_at != book.updated_at {
+        return Err(ApiError::OutdatedData);
+    }
+    let mut active_model: ActiveModel = update_book.to_active_model();
+    active_model.id = ActiveValue::Set(book_id);
     let updated_book = active_model.update(db).await?;
     Ok(HttpResponse::Ok()
         .content_type("application/json")

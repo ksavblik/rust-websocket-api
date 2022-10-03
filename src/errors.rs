@@ -7,6 +7,7 @@ pub enum ApiError {
     Serialization(serde_json::Error),
     IoError(io::Error),
     NotFound(&'static str),
+    OutdatedData,
 }
 
 impl From<io::Error> for ApiError {
@@ -37,6 +38,7 @@ impl ResponseError for ApiError {
     fn status_code(&self) -> StatusCode {
         match self {
             ApiError::NotFound(_) => StatusCode::NOT_FOUND,
+            ApiError::OutdatedData => StatusCode::BAD_REQUEST,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
