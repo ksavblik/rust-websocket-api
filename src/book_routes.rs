@@ -36,7 +36,7 @@ async fn get_book(
             .content_type("application/json")
             .body(serde_json::to_string(&book)?));
     }
-    Err(ApiError::NotFoundError)
+    Err(ApiError::NotFound("No such book with given id"))
 }
 
 #[post("/book")]
@@ -75,7 +75,7 @@ async fn delete_book(
     let db = &data.db_conn;
     let res = Book::delete_by_id(id.into_inner()).exec(db).await?;
     if res.rows_affected != 1 {
-        return Err(ApiError::NotFoundError);
+        return Err(ApiError::NotFound("No such book with given id"));
     }
     Ok(HttpResponse::Ok().finish())
 }

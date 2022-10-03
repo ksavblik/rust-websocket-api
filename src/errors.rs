@@ -1,12 +1,12 @@
-use actix_web::{body::BoxBody, http, HttpResponse, ResponseError};
+use actix_web::{body::BoxBody, http::StatusCode, HttpResponse, ResponseError};
 use std::{fmt, io};
 
 #[derive(Debug)]
 pub enum ApiError {
-    DatabaseError(sea_orm::DbErr),
-    SerializationError(serde_json::Error),
+    Database(sea_orm::DbErr),
+    Serialization(serde_json::Error),
     IoError(io::Error),
-    NotFoundError,
+    NotFound(&'static str),
 }
 
 impl From<io::Error> for ApiError {
@@ -17,13 +17,13 @@ impl From<io::Error> for ApiError {
 
 impl From<sea_orm::DbErr> for ApiError {
     fn from(err: sea_orm::DbErr) -> Self {
-        ApiError::DatabaseError(err)
+        ApiError::Database(err)
     }
 }
 
 impl From<serde_json::Error> for ApiError {
     fn from(err: serde_json::Error) -> Self {
-        ApiError::SerializationError(err)
+        ApiError::Serialization(err)
     }
 }
 
@@ -34,8 +34,11 @@ impl fmt::Display for ApiError {
 }
 
 impl ResponseError for ApiError {
-    fn status_code(&self) -> http::StatusCode {
-        http::StatusCode::INTERNAL_SERVER_ERROR
+    fn status_code(&self) -> StatusCode {
+        match self {
+            ApiError::NotFound(_) => StatusCode::NOT_FOUND,
+            _ => StatusCode::INTERNAL_SERVER_ERROR,
+        }
     }
 
     fn error_response(&self) -> HttpResponse<BoxBody> {
