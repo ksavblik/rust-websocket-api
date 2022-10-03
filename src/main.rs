@@ -1,30 +1,59 @@
+use std::{collections::HashMap, sync::Arc};
+
 use actix_web::{middleware, web, App, HttpServer};
-use actix_web_actors::ws;
 use dotenv::dotenv;
 use migration::{Migrator, MigratorTrait};
 use sea_orm::DatabaseConnection;
-use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
+use serde::{Deserialize, Serialize};
+use tokio::sync::{
+    mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender},
+    Mutex,
+};
+use uuid::Uuid;
 
-mod request_payloads;
+use log::debug;
 
 mod book_routes;
-use book_routes::book_service;
-
 mod errors;
+mod request_payloads;
+mod websocket;
 
+use book_routes::book_service;
 use entity::book::Model;
+use websocket::ws_handler;
 
-#[derive(Debug, Clone)]
+pub type WebSocketSession = Arc<Mutex<actix_ws::Session>>;
+
+pub type WebSocketSessions = Arc<Mutex<HashMap<Uuid, WebSocketSession>>>;
+
+#[derive(Clone)]
 struct AppState {
     db_conn: DatabaseConnection,
     broadcaster: UnboundedSender<DbAction>,
-    // ws_clients: Arc<Mutex<Vec<ws::WebsocketContext<>>>>
+    ws_clients: WebSocketSessions,
 }
 
-enum DbAction {
+#[derive(Serialize, Deserialize, Debug)]
+pub enum DbAction {
     Created(Model),
     Updated(Model),
     Deleted(i32),
+}
+
+impl std::fmt::Display for DbAction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DbAction::Created(new_book) => {
+                write!(f, "Created book [id: {}]", new_book.id)
+            }
+            DbAction::Updated(updated_book) => {
+                write!(f, "Updated book [id: {}]", updated_book.id)
+            }
+            DbAction::Deleted(id) => {
+                write!(f, "Deleted book [id: {}]", id)
+            }
+        }
+    }
 }
 
 #[actix_web::main]
@@ -47,14 +76,22 @@ async fn main() -> std::io::Result<()> {
     let (tx, mut rx): (UnboundedSender<DbAction>, UnboundedReceiver<DbAction>) =
         unbounded_channel();
 
+    let ws_clients = Arc::new(Mutex::new(HashMap::new()));
+
     let state = AppState {
         db_conn: connection,
         broadcaster: tx,
+        ws_clients: ws_clients.clone(),
     };
 
     tokio::spawn(async move {
         while let Some(message) = rx.recv().await {
-            // println!("GOT = {}", message);
+            let json = serde_json::to_string(&message).unwrap();
+            debug!("Sending {} action update to WebSocket clients", message);
+            for (_, ws_session) in ws_clients.lock().await.iter() {
+                let mut ws_session = ws_session.lock().await;
+                let _ = ws_session.text(&json).await;
+            }
         }
     });
 
@@ -63,6 +100,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(state.clone()))
             .wrap(middleware::Logger::default()) // enable logger
             .configure(book_service)
+            .service(ws_handler)
     })
     .bind(("127.0.0.1", 8080))?
     .run()

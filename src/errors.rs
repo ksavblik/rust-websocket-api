@@ -1,14 +1,21 @@
-use actix_web::{body::BoxBody, http::StatusCode, HttpResponse, ResponseError};
+use actix_web::{
+    body::BoxBody, error::Error as ActixError, http::StatusCode, HttpResponse, ResponseError,
+};
 use std::{
     fmt::{self, Debug},
     io,
 };
+use tokio::sync::mpsc::error as mpsc_error;
+
+use crate::DbAction;
 
 #[derive(Debug)]
 pub enum ApiError {
     Database(sea_orm::DbErr),
     Serialization(serde_json::Error),
     IoError(io::Error),
+    Broadcast(mpsc_error::SendError<DbAction>),
+    Actix(ActixError),
     NotFound(&'static str),
     OutdatedData,
 }
@@ -16,6 +23,12 @@ pub enum ApiError {
 impl From<io::Error> for ApiError {
     fn from(err: io::Error) -> ApiError {
         ApiError::IoError(err)
+    }
+}
+
+impl From<mpsc_error::SendError<DbAction>> for ApiError {
+    fn from(err: mpsc_error::SendError<DbAction>) -> ApiError {
+        ApiError::Broadcast(err)
     }
 }
 
@@ -28,6 +41,12 @@ impl From<sea_orm::DbErr> for ApiError {
 impl From<serde_json::Error> for ApiError {
     fn from(err: serde_json::Error) -> Self {
         ApiError::Serialization(err)
+    }
+}
+
+impl From<ActixError> for ApiError {
+    fn from(err: ActixError) -> Self {
+        ApiError::Actix(err)
     }
 }
 

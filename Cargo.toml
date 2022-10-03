@@ -21,3 +21,6 @@ serde = "1.0.145"
 chrono = "0.4.22"
 tracing-subscriber = { version = "0.3.15", features = ["env-filter"] }
 tokio = { version = "1.21.1", features = ["full"] }
+actix-ws = "0.2.5"
+log = "0.4.17"
+uuid = { version = "1.1.2", features = ["v4", "fast-rng"] }

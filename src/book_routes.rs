@@ -4,7 +4,7 @@ use migration::sea_orm::{ActiveModelTrait, ActiveValue, EntityTrait};
 
 use crate::errors::ApiError;
 use crate::request_payloads::{CreateBook, ToActiveModel, UpdateBook};
-use crate::AppState;
+use crate::{AppState, DbAction};
 
 pub fn book_service(cfg: &mut web::ServiceConfig) {
     cfg.service(get_books);
@@ -46,10 +46,12 @@ async fn create_book(
 ) -> Result<impl Responder, ApiError> {
     let db = &data.db_conn;
     let active_model = payload.into_inner().to_active_model();
-    let inserted_model = active_model.insert(db).await?;
+    let inserted_book = active_model.insert(db).await?;
+    let json = serde_json::to_string(&inserted_book)?;
+    data.broadcaster.send(DbAction::Created(inserted_book))?;
     Ok(HttpResponse::Created()
         .content_type("application/json")
-        .body(serde_json::to_string(&inserted_model)?))
+        .body(json))
 }
 
 #[patch("/book/{id}")]
@@ -69,9 +71,11 @@ async fn patch_book(
     let mut active_model: ActiveModel = update_book.to_active_model();
     active_model.id = ActiveValue::Set(book_id);
     let updated_book = active_model.update(db).await?;
+    let json = serde_json::to_string(&updated_book)?;
+    data.broadcaster.send(DbAction::Updated(updated_book))?;
     Ok(HttpResponse::Ok()
         .content_type("application/json")
-        .body(serde_json::to_string(&updated_book)?))
+        .body(json))
 }
 
 #[delete("/book/{id}")]
@@ -80,9 +84,11 @@ async fn delete_book(
     id: web::Path<i32>,
 ) -> Result<impl Responder, ApiError> {
     let db = &data.db_conn;
-    let res = Book::delete_by_id(id.into_inner()).exec(db).await?;
+    let book_id = id.into_inner();
+    let res = Book::delete_by_id(book_id).exec(db).await?;
     if res.rows_affected != 1 {
         return Err(ApiError::NotFound("No such book with given id"));
     }
+    data.broadcaster.send(DbAction::Deleted(book_id))?;
     Ok(HttpResponse::Ok().finish())
 }
