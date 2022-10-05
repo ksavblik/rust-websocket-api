@@ -1,5 +1,6 @@
 use actix_web::{
-    body::BoxBody, error::Error as ActixError, http::StatusCode, HttpResponse, ResponseError,
+    body::BoxBody, error::Error as ActixError, http::StatusCode, HttpResponse, HttpResponseBuilder,
+    ResponseError,
 };
 use std::{
     fmt::{self, Debug},
@@ -74,6 +75,6 @@ impl ResponseError for ApiError {
             ApiError::NotFound(details) => format!("Not found: {}", details),
             _ => "Internal Server Error!".to_owned(),
         };
-        HttpResponse::Ok().body(error_details)
+        HttpResponseBuilder::new(self.status_code()).body(error_details)
     }
 }
