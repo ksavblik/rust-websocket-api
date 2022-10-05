@@ -66,6 +66,14 @@ impl ResponseError for ApiError {
     }
 
     fn error_response(&self) -> HttpResponse<BoxBody> {
-        HttpResponse::Ok().body(format!("{}", self))
+        let error_details = match &self {
+            ApiError::OutdatedData => {
+                "Book from the request body has outdated updatedAt timestamp, send an actual one!"
+                    .to_owned()
+            }
+            ApiError::NotFound(details) => format!("Not found: {}", details),
+            _ => "Internal Server Error!".to_owned(),
+        };
+        HttpResponse::Ok().body(error_details)
     }
 }
