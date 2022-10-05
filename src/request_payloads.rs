@@ -28,6 +28,7 @@ where
 }
 
 #[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CreateBook {
     pub title: String,
     pub author: String,
@@ -51,6 +52,7 @@ impl ToActiveModel<ActiveModel> for CreateBook {
 }
 
 #[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UpdateBook {
     pub title: Option<String>,
     pub author: Option<String>,

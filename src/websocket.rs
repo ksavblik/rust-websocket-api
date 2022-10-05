@@ -35,15 +35,14 @@ pub async fn start_ws(
     let uuid = uuid::Uuid::new_v4();
 
     {
-      let mut clients_lock = ws_clients.lock().await;
-      clients_lock.insert(uuid, session.clone());
-  
-      debug!(
-          "Current amount of the WebSocket connections {}",
-          clients_lock.len()
-      );
-    }
+        let mut clients_lock = ws_clients.lock().await;
+        clients_lock.insert(uuid, session.clone());
 
+        debug!(
+            "Current amount of the WebSocket connections {}",
+            clients_lock.len()
+        );
+    }
 
     let close_reason = loop {
         match msg_stream.recv().await {

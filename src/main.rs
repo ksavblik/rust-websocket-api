@@ -1,5 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
+use actix_cors::Cors;
 use actix_web::{middleware, web, App, HttpServer};
 use dotenv::dotenv;
 use migration::{Migrator, MigratorTrait};
@@ -36,6 +37,7 @@ struct AppState {
 
 // Events with data to send through all websocket sessions
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub enum DbAction {
     Created(Model),
     Updated(Model),
@@ -100,11 +102,17 @@ async fn main() -> std::io::Result<()> {
     });
 
     HttpServer::new(move || {
+        // only for dev purposes
+        let cors = Cors::default()
+            .allow_any_header()
+            .allow_any_method()
+            .allow_any_origin();
         App::new()
             .app_data(web::Data::new(state.clone()))
             .wrap(middleware::Logger::default()) // enable logger
             .configure(book_service)
             .service(ws_handler)
+            .wrap(cors)
     })
     .bind(("127.0.0.1", 8080))?
     .run()
